@@ -1,6 +1,4 @@
-# =========================================================================
-# CLASES DE DOMINIO / ENTIDADES DEL SISTEMA DE INFORMACIÓN FINANCIERA MEF
-# =========================================================================
+# ENTIDADES DEL SISTEMA DE INFORMACIÓN FINANCIERA MEF
 
 class EntidadEjecutora:
     def __init__(self, sec_ejec, ejecutora_nombre):

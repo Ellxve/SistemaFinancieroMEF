@@ -1,6 +1,4 @@
-// =========================================================================
-// LOGICA DINÁMICA DE MÓDULOS, PERIODOS Y ESTADOS DE CARGA (MEF SVS)
-// =========================================================================
+// LOGICA DINÁMICA DE MÓDULOS, PERIODOS Y ESTADOS DE CARGA (MEF SVS)//
 
 let entidadSeleccionada = { sec_ejec: '301086', ejecutora_nombre: 'MUNICIPALIDAD METROPOLITANA DE LIMA' };
 let moduloActual = 'inicio';
@@ -66,7 +64,7 @@ document.addEventListener('DOMContentLoaded', () => {
     ejecutarConsulta();
 });
 
-// 1. Configuración del Buscador con Autocompletado
+// Configuración del Buscador con Autocompletado
 function configurarBuscador() {
     const inputBusqueda = document.getElementById('input-busqueda');
     const listaAutocompletado = document.getElementById('lista-autocompletado');
@@ -120,7 +118,7 @@ function configurarBuscador() {
     });
 }
 
-// 2. Cambio entre Módulos/Pestañas
+// Cambio entre Módulos/Pestañas
 function cambiarModulo(nombreModulo) {
     moduloActual = nombreModulo;
     const config = CONFIG_MODULOS[nombreModulo];
@@ -155,7 +153,7 @@ function cambiarModulo(nombreModulo) {
     ejecutarConsulta();
 }
 
-// 3. Ejecutar Consulta con Filtros de Periodo y Mensajes de Carga
+// Ejecutar Consulta con Filtros de Periodo y Mensajes de Carga
 async function ejecutarConsulta() {
     const secEjec = entidadSeleccionada ? entidadSeleccionada.sec_ejec : '301086';
     const anoInicio = document.getElementById('select-ano-inicio').value;
@@ -187,7 +185,7 @@ async function ejecutarConsulta() {
     }
 }
 
-// 4. Mostrar u Ocultar Indicadores de Carga
+// Mostrar u Ocultar Indicadores de Carga
 function mostrarEstadoCarga(cargando) {
     const overlay = document.getElementById('loading-overlay');
     const iconBtn = document.getElementById('icon-btn-consultar');
@@ -204,7 +202,7 @@ function mostrarEstadoCarga(cargando) {
     }
 }
 
-// 5. Actualizar el Banner Principal de la Entidad
+// Actualizar el Banner Principal de la Entidad
 function actualizarBannerEntidad(entidad, anoInicio, anoFin) {
     if (entidad) {
         document.getElementById('entidad-nombre-grande').textContent = entidad.ejecutora_nombre;
@@ -213,7 +211,7 @@ function actualizarBannerEntidad(entidad, anoInicio, anoFin) {
     document.getElementById('entidad-periodo').textContent = `${anoInicio} — ${anoFin}`;
 }
 
-// 6. Actualizar KPIs, Tablas y Gráficos
+// Actualizar KPIs, Tablas y Gráficos
 function actualizarInterfaz(data, anoInicio, anoFin) {
     const ind = data.indicadores;
 

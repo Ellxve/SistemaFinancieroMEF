@@ -2,35 +2,23 @@ import os
 import sys
 from flask import Flask, render_template, request, jsonify
 
-# Permitir la importación del módulo Modelo desde la carpeta raíz SVS
 sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), '..')))
 
 from Modelo.dao import SistemaFinancieroDAO
 
-# Configuración de Flask enlazado con la carpeta Vista
 app = Flask(
     __name__,
     template_folder='../Vista/templates',
     static_folder='../Vista/static'
 )
 
-# Instancia global de la Capa Modelo (DAO)
 dao = SistemaFinancieroDAO()
-
-
-# =========================================================================
-# 1. RUTA PRINCIPAL (PÁGINA WEB)
-# =========================================================================
 
 @app.route('/')
 def index():
     """ Renderiza la pantalla principal del Dashboard """
     return render_template('dashboard.html')
 
-
-# =========================================================================
-# 2. ENDPOINTS DE LA API (RESPUESTAS EN JSON)
-# =========================================================================
 
 @app.route('/api/buscar_entidades', methods=['GET'])
 def buscar_entidades():
@@ -65,9 +53,9 @@ def consultar_integrado():
     if not data.get("entidad"):
         return jsonify({"error": "No se encontró la entidad seleccionada."}), 404
 
-    # ---------------------------------------------------------------------
+
     # LÓGICA DE NEGOCIO: Cálculo de Indicadores Financieros Globales
-    # ---------------------------------------------------------------------
+
     total_transferencias = sum(t["monto_acreditado"] for t in data["transferencias"])
     total_ingresos = sum(i["monto_recaudado"] for i in data["ingresos"])
     
@@ -101,10 +89,8 @@ def consultar_integrado():
     return jsonify(respuesta)
 
 
-# =========================================================================
-# 3. EJECUCIÓN DEL SERVIDOR LOCAL
-# =========================================================================
+
+# EJECUCIÓN DEL SERVIDOR LOCAL
 
 if __name__ == '__main__':
-    # Levanta el servidor local en http://127.0.0.1:5000/
     app.run(debug=True, port=5000)

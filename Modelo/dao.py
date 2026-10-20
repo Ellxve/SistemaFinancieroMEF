@@ -5,7 +5,6 @@ from Modelo.entidades import (
 
 class SistemaFinancieroDAO:
     def __init__(self):
-        # Configuración de conexión a la Base de Datos
         self.config = {
             'host': 'localhost',
             'user': 'root',
@@ -18,7 +17,6 @@ class SistemaFinancieroDAO:
         return mysql.connector.connect(**self.config)
 
     def buscar_entidades_por_nombre(self, criterio):
-        """ Llama al Stored Procedure sp_buscar_entidades """
         conn = self._get_connection()
         cursor = conn.cursor(dictionary=True)
         entidades = []
@@ -34,7 +32,6 @@ class SistemaFinancieroDAO:
         return entidades
 
     def consultar_integrado_entidad(self, sec_ejec, ano_inicio, ano_fin):
-        """ Llama al Stored Procedure sp_consultar_integrado_entidad """
         conn = self._get_connection()
         cursor = conn.cursor(dictionary=True)
         
