@@ -1,0 +1,311 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>SISTEMA DE INFORMACIÓN FINANCIERA MEF</title>
+    <!-- Tailwind CSS CDN -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <!-- Chart.js CDN -->
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <!-- FontAwesome icons -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <style>
+        .card-glow {
+            transition: all 0.25s ease-in-out;
+        }
+        .card-glow:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 10px 25px -5px rgba(14, 165, 233, 0.15);
+        }
+        ::-webkit-scrollbar {
+            width: 6px;
+            height: 6px;
+        }
+        ::-webkit-scrollbar-track {
+            background: #f1f5f9;
+        }
+        ::-webkit-scrollbar-thumb {
+            background: #cbd5e1;
+            border-radius: 4px;
+        }
+    </style>
+</head>
+<body class="bg-slate-100 text-slate-800 font-sans min-h-screen flex flex-col antialiased m-0 p-0 overflow-x-hidden">
+
+    <!-- Contenedor Pantalla Completa -->
+    <div class="w-full min-h-screen bg-slate-50 flex flex-col">
+
+        <!-- Header Principal Premium -->
+        <header class="bg-[#070e20] text-white px-6 py-4 flex flex-col lg:flex-row justify-between items-center border-b border-slate-800/80 gap-4 shadow-lg">
+            
+            <!-- Identificador y Estado de Conexión -->
+            <div class="flex items-center space-x-3">
+                <div class="w-10 h-10 rounded-xl bg-gradient-to-tr from-sky-600 to-cyan-400 flex items-center justify-center shadow-lg shadow-sky-500/20">
+                    <i class="fa-solid fa-chart-pie text-white text-lg"></i>
+                </div>
+                <div>
+                    <div class="flex items-center gap-2">
+                        <h1 class="text-sm font-extrabold tracking-widest text-white uppercase">
+                            SISTEMA DE INFORMACIÓN FINANCIERA MEF
+                        </h1>
+                        
+                    </div>
+                    <p class="text-[11px] text-slate-400">Plataforma Integrada de Análisis Presupuestal y Ejecución Social</p>
+                </div>
+            </div>
+            
+            <!-- Pestañas de Navegación Interactivas -->
+            <nav class="flex flex-wrap gap-1.5 bg-slate-900/90 p-1.5 rounded-xl border border-slate-800/80 text-xs font-semibold">
+                <button onclick="cambiarModulo('inicio')" id="btn-inicio" 
+                        class="nav-btn px-4 py-2 rounded-lg bg-gradient-to-r from-sky-500 to-cyan-500 text-white font-bold shadow-md shadow-sky-500/20 transition-all flex items-center gap-2">
+                    <i class="fa-solid fa-house text-xs"></i> INICIO
+                </button>
+                <button onclick="cambiarModulo('ingresos')" id="btn-ingresos" 
+                        class="nav-btn px-4 py-2 rounded-lg text-slate-300 hover:text-white hover:bg-slate-800/60 transition-all flex items-center gap-2">
+                    <i class="fa-solid fa-wallet text-xs"></i> Ingresos
+                </button>
+                <button onclick="cambiarModulo('gasto')" id="btn-gasto" 
+                        class="nav-btn px-4 py-2 rounded-lg text-slate-300 hover:text-white hover:bg-slate-800/60 transition-all flex items-center gap-2">
+                    <i class="fa-solid fa-hand-holding-dollar text-xs"></i> Gasto Social
+                </button>
+                <button onclick="cambiarModulo('transferencias')" id="btn-transferencias" 
+                        class="nav-btn px-4 py-2 rounded-lg text-slate-300 hover:text-white hover:bg-slate-800/60 transition-all flex items-center gap-2">
+                    <i class="fa-solid fa-arrow-right-arrow-left text-xs"></i> Transferencias
+                </button>
+                <button onclick="cambiarModulo('proyectos')" id="btn-proyectos" 
+                        class="nav-btn px-4 py-2 rounded-lg text-slate-300 hover:text-white hover:bg-slate-800/60 transition-all flex items-center gap-2">
+                    <i class="fa-solid fa-diagram-project text-xs"></i> Proyectos
+                </button>
+            </nav>
+        </header>
+
+        <!-- Contenido Central -->
+        <main class="p-6 md:p-8 flex-1 flex flex-col gap-6 bg-slate-100/60 relative">
+
+            <!-- Encabezado con Filtros por Rango de Periodos -->
+            <div class="flex flex-col xl:flex-row justify-between items-start xl:items-center bg-white p-5 rounded-xl border border-slate-200/80 shadow-sm gap-4">
+                <div>
+                    <h2 id="modulo-titulo" class="text-2xl font-black text-slate-800 tracking-tight flex items-center gap-2">
+                        <span class="w-2 h-6 bg-sky-500 rounded-full inline-block"></span> Dashboard General
+                    </h2>
+                    <p id="modulo-subtitulo" class="text-xs font-medium text-slate-500 mt-0.5 ml-4">
+                        Resumen consolidado de la información financiera y proyectos del MEF
+                    </p>
+                </div>
+
+                <!-- Barra de Búsqueda y Rango de Años -->
+                <div class="flex flex-wrap items-center gap-2.5 w-full xl:w-auto">
+                    <!-- Buscador -->
+                    <div class="relative flex-1 md:w-80">
+                        <div class="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none text-slate-400">
+                            <i class="fa-solid fa-magnifying-glass text-xs"></i>
+                        </div>
+                        <input type="text" id="input-busqueda" placeholder="Buscar por Nombre o SEC_EJEC..." 
+                               class="w-full pl-9 pr-3 py-2 text-xs border border-slate-300 rounded-lg bg-slate-50 focus:bg-white focus:ring-2 focus:ring-sky-500/20 focus:border-sky-500 transition-all outline-none font-medium text-slate-700" 
+                               autocomplete="off">
+                        <ul id="lista-autocompletado" class="hidden absolute left-0 right-0 top-full bg-white border border-slate-200 rounded-lg shadow-xl max-h-56 overflow-y-auto z-50 text-xs mt-1 divide-y divide-slate-100"></ul>
+                    </div>
+
+                    <!-- Año Inicio -->
+                    <div class="flex items-center gap-1 bg-slate-50 border border-slate-300 rounded-lg px-2 py-1">
+                        <span class="text-[10px] font-bold text-slate-400 uppercase">Desde:</span>
+                        <select id="select-ano-inicio" class="bg-transparent text-xs font-semibold text-slate-700 outline-none cursor-pointer">
+                            <option value="2021" selected>2021</option>
+                            <option value="2022">2022</option>
+                            <option value="2023">2023</option>
+                        </select>
+                    </div>
+
+                    <!-- Año Fin -->
+                    <div class="flex items-center gap-1 bg-slate-50 border border-slate-300 rounded-lg px-2 py-1">
+                        <span class="text-[10px] font-bold text-slate-400 uppercase">Hasta:</span>
+                        <select id="select-ano-fin" class="bg-transparent text-xs font-semibold text-slate-700 outline-none cursor-pointer">
+                            <option value="2021">2021</option>
+                            <option value="2022">2022</option>
+                            <option value="2023" selected>2023</option>
+                        </select>
+                    </div>
+
+                    <!-- Botón Consultar -->
+                    <button id="btn-consultar" onclick="ejecutarConsulta()" class="px-5 py-2 bg-gradient-to-r from-sky-500 to-sky-600 hover:from-sky-600 hover:to-sky-700 text-white text-xs font-bold rounded-lg shadow-md shadow-sky-500/20 hover:shadow-lg transition-all flex items-center gap-1.5 active:scale-95">
+                        <i id="icon-btn-consultar" class="fa-solid fa-filter text-[10px]"></i> 
+                        <span id="txt-btn-consultar">CONSULTAR</span>
+                    </button>
+                </div>
+            </div>
+
+            <!-- Banner Grande de Entidad Seleccionada -->
+            <div id="banner-entidad" class="bg-gradient-to-r from-[#070e20] to-[#0f2347] text-white p-6 rounded-2xl shadow-lg border border-slate-800 flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
+                <div class="flex items-center gap-4">
+                    <div class="w-14 h-14 rounded-2xl bg-sky-500/20 border border-sky-400/30 flex items-center justify-center text-sky-400 text-2xl shadow-inner">
+                        <i class="fa-solid fa-landmark"></i>
+                    </div>
+                    <div>
+                        <span class="text-[10px] font-bold uppercase tracking-widest text-sky-400 bg-sky-500/10 px-2.5 py-0.5 rounded-full border border-sky-500/20">
+                            Entidad Consultada
+                        </span>
+                        <h2 id="entidad-nombre-grande" class="text-2xl md:text-3xl font-black text-white tracking-tight mt-1">
+                            MUNICIPALIDAD METROPOLITANA DE LIMA
+                        </h2>
+                        <p class="text-xs text-slate-400 mt-1 flex items-center gap-2">
+                            <span>SEC_EJEC: <strong id="entidad-sec-ejec" class="font-mono text-sky-300 bg-slate-800 px-2 py-0.5 rounded">301086</strong></span>
+                        </p>
+                    </div>
+                </div>
+                <div class="bg-slate-800/80 border border-slate-700/80 px-4 py-2.5 rounded-xl flex items-center gap-3">
+                    <i class="fa-regular fa-calendar-check text-sky-400 text-lg"></i>
+                    <div>
+                        <span class="text-[10px] text-slate-400 uppercase font-bold block">Periodo Evaluado</span>
+                        <span id="entidad-periodo" class="text-xs font-mono font-bold text-white">2021 — 2023</span>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Indicador Flotante de Carga (Overlay de Loading) -->
+            <div id="loading-overlay" class="hidden absolute inset-0 bg-slate-900/30 backdrop-blur-sm z-40 rounded-2xl flex flex-col items-center justify-center text-white">
+                <div class="bg-slate-900 border border-slate-700 p-6 rounded-2xl shadow-2xl flex flex-col items-center gap-3">
+                    <i class="fa-solid fa-circle-notch fa-spin text-sky-400 text-3xl"></i>
+                    <p class="text-xs font-bold text-slate-200">Procesando datos del MEF. Esto tardará unos segundos, espere por favor...</p>
+                    <span class="text-[10px] text-slate-400">Consultando Stored Procedures en MySQL</span>
+                </div>
+            </div>
+
+            <!-- Tarjetas KPIs -->
+            <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-5">
+                <div class="bg-white p-5 rounded-xl shadow-sm border border-slate-200/80 border-l-[5px] border-l-sky-500 card-glow relative overflow-hidden">
+                    <div class="flex justify-between items-start">
+                        <div>
+                            <span id="kpi-label-1" class="text-[11px] font-bold text-slate-400 uppercase tracking-wider">INGRESOS TOTALES</span>
+                            <p id="kpi-val-1" class="text-2xl font-black text-slate-800 mt-1">S/ 0.00</p>
+                        </div>
+                        <div class="p-2.5 rounded-lg bg-sky-50 text-sky-600">
+                            <i class="fa-solid fa-sack-dollar text-base"></i>
+                        </div>
+                    </div>
+                    <div id="kpi-sub-1" class="mt-3 flex items-center text-[11px] font-semibold text-emerald-600">
+                        <i class="fa-solid fa-arrow-trend-up mr-1"></i> Recaudación constante
+                    </div>
+                </div>
+
+                <div class="bg-white p-5 rounded-xl shadow-sm border border-slate-200/80 border-l-[5px] border-l-cyan-500 card-glow relative overflow-hidden">
+                    <div class="flex justify-between items-start">
+                        <div>
+                            <span id="kpi-label-2" class="text-[11px] font-bold text-slate-400 uppercase tracking-wider">GASTO SOCIAL</span>
+                            <p id="kpi-val-2" class="text-2xl font-black text-slate-800 mt-1">S/ 0.00</p>
+                        </div>
+                        <div class="p-2.5 rounded-lg bg-cyan-50 text-cyan-600">
+                            <i class="fa-solid fa-people-hold text-base"></i>
+                        </div>
+                    </div>
+                    <div id="kpi-sub-2" class="mt-3 flex items-center text-[11px] font-semibold text-sky-600">
+                        <i class="fa-solid fa-circle-check mr-1"></i> Devengado verificado
+                    </div>
+                </div>
+
+                <div class="bg-white p-5 rounded-xl shadow-sm border border-slate-200/80 border-l-[5px] border-l-indigo-500 card-glow relative overflow-hidden">
+                    <div class="flex justify-between items-start">
+                        <div>
+                            <span id="kpi-label-3" class="text-[11px] font-bold text-slate-400 uppercase tracking-wider">TRANSFERENCIAS</span>
+                            <p id="kpi-val-3" class="text-2xl font-black text-slate-800 mt-1">S/ 0.00</p>
+                        </div>
+                        <div class="p-2.5 rounded-lg bg-indigo-50 text-indigo-600">
+                            <i class="fa-solid fa-building-columns text-base"></i>
+                        </div>
+                    </div>
+                    <div id="kpi-sub-3" class="mt-3 flex items-center text-[11px] font-semibold text-slate-500">
+                        <i class="fa-solid fa-clock-history mr-1"></i> Fondos acreditados
+                    </div>
+                </div>
+
+                <div class="bg-white p-5 rounded-xl shadow-sm border border-slate-200/80 border-l-[5px] border-l-emerald-500 card-glow relative overflow-hidden">
+                    <div class="flex justify-between items-start">
+                        <div>
+                            <span id="kpi-label-4" class="text-[11px] font-bold text-slate-400 uppercase tracking-wider">PROYECTOS</span>
+                            <p id="kpi-val-4" class="text-2xl font-black text-slate-800 mt-1">0 Activos</p>
+                        </div>
+                        <div class="p-2.5 rounded-lg bg-emerald-50 text-emerald-600">
+                            <i class="fa-solid fa-chart-line text-base"></i>
+                        </div>
+                    </div>
+                    <div id="kpi-sub-4" class="mt-3 flex items-center text-[11px] font-semibold text-emerald-600">
+                        <i class="fa-solid fa-bolt mr-1"></i> Inversión pública activa
+                    </div>
+                </div>
+            </div>
+
+            <!-- Gráficos Principales -->
+            <div class="grid grid-cols-1 lg:grid-cols-2 gap-6 flex-1">
+                <div class="bg-white p-6 rounded-xl shadow-sm border border-slate-200/80 flex flex-col justify-between">
+                    <div class="flex justify-between items-center mb-4">
+                        <h3 id="chart-title-1" class="text-xs font-extrabold text-slate-700 uppercase tracking-wider flex items-center gap-2">
+                            <i class="fa-solid fa-chart-column text-sky-500"></i> Evolución Financiera
+                        </h3>
+                        <span class="text-[10px] font-semibold bg-slate-100 text-slate-600 px-2.5 py-1 rounded-md border border-slate-200">
+                            Histórico
+                        </span>
+                    </div>
+                    <div class="flex-1 min-h-[260px] relative">
+                        <canvas id="chartPrincipal"></canvas>
+                    </div>
+                </div>
+
+                <div class="bg-white p-6 rounded-xl shadow-sm border border-slate-200/80 flex flex-col justify-between">
+                    <div class="flex justify-between items-center mb-4">
+                        <h3 id="chart-title-2" class="text-xs font-extrabold text-slate-700 uppercase tracking-wider flex items-center gap-2">
+                            <i class="fa-solid fa-chart-pie text-cyan-500"></i> Distribución
+                        </h3>
+                        <span class="text-[10px] font-semibold bg-slate-100 text-slate-600 px-2.5 py-1 rounded-md border border-slate-200">
+                            Estructura Porcentual
+                        </span>
+                    </div>
+                    <div class="flex-1 min-h-[260px] relative">
+                        <canvas id="chartSecundario"></canvas>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Tabla de Resultados -->
+            <div class="bg-white rounded-xl shadow-sm border border-slate-200/80 p-6">
+                <div class="flex flex-col sm:flex-row justify-between items-start sm:items-center pb-4 mb-4 border-b border-slate-100 gap-3">
+                    <div>
+                        <h3 id="tabla-titulo" class="text-xs font-extrabold text-slate-800 uppercase tracking-wider flex items-center gap-2">
+                            <i class="fa-solid fa-list-check text-sky-500"></i> Resumen de Entidades y Resultados Recientes
+                        </h3>
+                        <p class="text-[11px] text-slate-400 mt-0.5">Reporte detallado procesado directamente desde la base de datos MEF</p>
+                    </div>
+
+                    <div class="flex items-center gap-2">
+                        <button onclick="exportarDatos('csv')" class="px-3 py-1.5 text-[11px] bg-slate-50 border border-slate-200 rounded-lg hover:bg-slate-100 text-slate-700 font-bold transition flex items-center gap-1.5 shadow-sm">
+                            <i class="fa-solid fa-file-csv text-emerald-600"></i> Exportar CSV
+                        </button>
+                        <button onclick="exportarDatos('excel')" class="px-3 py-1.5 text-[11px] bg-slate-50 border border-slate-200 rounded-lg hover:bg-slate-100 text-slate-700 font-bold transition flex items-center gap-1.5 shadow-sm">
+                            <i class="fa-solid fa-file-excel text-emerald-600"></i> Exportar Excel
+                        </button>
+                    </div>
+                </div>
+
+                <div class="overflow-x-auto">
+                    <table class="w-full text-left text-xs text-slate-600">
+                        <thead class="bg-slate-50/80 border-y border-slate-200 text-slate-500 uppercase text-[10px] font-extrabold tracking-wider">
+                            <tr>
+                                <th class="py-3 px-4">Entidad Ejecutora</th>
+                                <th class="py-3 px-4">Año</th>
+                                <th class="py-3 px-4">Indicador / Rubro</th>
+                                <th class="py-3 px-4 text-right">Monto / Ejecución</th>
+                            </tr>
+                        </thead>
+                        <tbody id="tabla-resultados-body" class="divide-y divide-slate-100 font-medium">
+                            <!-- Filas generadas por JavaScript -->
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+
+        </main>
+    </div>
+
+    <!-- JS de la Capa Vista -->
+    <script src="{{ url_for('static', filename='js/dashboard.js') }}"></script>
+</body>
+</html>

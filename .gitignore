@@ -1,0 +1,16 @@
+# Excluir la base de datos pesada y archivos de datos masivos
+*.sql
+*.dump
+*.csv
+*.xlsx
+*.db
+
+# Excluir carpetas temporales y entorno virtual de Python
+venv/
+env/
+__pycache__/
+*.pyc
+
+# Excluir configuraciones locales del editor
+.vscode/
+.idea/
