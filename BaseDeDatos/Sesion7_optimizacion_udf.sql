@@ -1,21 +1,12 @@
 USE sistema_financiero_mef;
-
--- =====================================================
--- PRACTICA 7: CONSULTAS AVANZADAS, UDF E INDICES
--- =====================================================
-
-
+-- SESION 7
 -- 1. VERIFICAR LOS INDICES EXISTENTES
--- No crea ni modifica indices.
-
 SHOW INDEX FROM ingreso;
 SHOW INDEX FROM gasto_social;
 SHOW INDEX FROM transferencia;
 SHOW INDEX FROM proyecto_inversion;
 
-
 -- 2. CONSULTA CON INNER JOIN, AGREGACION Y SUBCONSULTA
-
 SELECT
     e.sec_ejec AS codigo_ejecutora,
     e.ejecutora_nombre AS nombre_entidad,
@@ -34,8 +25,6 @@ LIMIT 50;
 
 
 -- 3. CONSULTA CON LEFT JOIN
--- Incluye entidades aunque no tengan ingresos en 2023.
-
 SELECT
     e.sec_ejec AS codigo_ejecutora,
     e.ejecutora_nombre AS nombre_entidad,
@@ -49,9 +38,6 @@ LIMIT 50;
 
 
 -- 4. FUNCION DEFINIDA POR EL USUARIO (UDF)
--- Esta seccion puede ejecutarse por separado.
--- Elimina y vuelve a crear solamente esta funcion.
-
 DROP FUNCTION IF EXISTS fn_CalcularPorcentajeEjecucionGlobal;
 
 DELIMITER //
@@ -78,16 +64,13 @@ END //
 
 DELIMITER ;
 
-
 -- 5. PROBAR LA FUNCION CON VALORES DE EJEMPLO
-
 SELECT fn_CalcularPorcentajeEjecucionGlobal(
     1000.00, 300.00, 800.00
 ) AS porcentaje_ejecucion;
 
 
 -- 6. ANALISIS DEL PLAN DE EJECUCION
-
 EXPLAIN
 SELECT
     sec_ejec,
