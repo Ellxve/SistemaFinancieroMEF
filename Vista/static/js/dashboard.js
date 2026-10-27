@@ -1,9 +1,11 @@
-// LOGICA DINÁMICA DE MÓDULOS, PERIODOS Y ESTADOS DE CARGA (MEF SVS)//
-
-let entidadSeleccionada = { sec_ejec: '301086', ejecutora_nombre: 'MUNICIPALIDAD METROPOLITANA DE LIMA' };
+let entidadSeleccionada = { sec_ejec: '301086', ejecutora_nombre: 'MUNICIPALIDAD PROVINCIAL DE JUNIN' };
 let moduloActual = 'inicio';
 let chartPrincipal = null;
 let chartSecundario = null;
+
+// Variables de Sesión para Control de Seguridad (DCL) - Sesión 6
+let usuarioAutenticado = 'us_operador_lima';
+let passwordAutenticado = 'OperadorMef2026!';
 
 const CONFIG_MODULOS = {
     inicio: {
@@ -61,13 +63,168 @@ const CONFIG_MODULOS = {
 document.addEventListener('DOMContentLoaded', () => {
     configurarBuscador();
     inicializarGraficos();
-    ejecutarConsulta();
 });
 
-// Configuración del Buscador con Autocompletado
+// -----------------------------------------------------------------------------
+// GESTIÓN DE ROLES Y AUTENTICACIÓN (SESIÓN 6)
+// -----------------------------------------------------------------------------
+
+function accesoCiudadano() {
+    usuarioAutenticado = 'us_web_publico';
+    passwordAutenticado = 'Consulta2026!';
+    document.getElementById('modal-login').classList.add('hidden');
+    document.getElementById('badge-rol-activo').textContent = 'Rol: Ciudadano Consulta';
+    document.getElementById('panel-operador-csv').classList.add('hidden');
+    
+    cargarAniosDinamicos();
+}
+
+async function autenticarUsuario(event) {
+    if (event) event.preventDefault();
+    const usInput = document.getElementById('login-usuario');
+    const passInput = document.getElementById('login-password');
+    const errDiv = document.getElementById('login-mensaje-error');
+
+    const us = usInput ? usInput.value.trim() : 'us_operador_lima';
+    const pass = passInput ? passInput.value.trim() : 'OperadorMef2026!';
+
+    if (errDiv) errDiv.classList.add('hidden');
+
+    try {
+        const res = await fetch('/api/login', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ usuario: us, password: pass })
+        });
+        const data = await res.json();
+
+        if (res.ok && data.exito) {
+            usuarioAutenticado = us;
+            passwordAutenticado = pass;
+            if (document.getElementById('modal-login')) {
+                document.getElementById('modal-login').classList.add('hidden');
+            }
+            if (document.getElementById('badge-rol-activo')) {
+                document.getElementById('badge-rol-activo').textContent = `Rol: ${us}`;
+            }
+
+            if (us === 'us_operador_lima' && document.getElementById('panel-operador-csv')) {
+                document.getElementById('panel-operador-csv').classList.remove('hidden');
+            }
+
+            cargarAniosDinamicos();
+        } else {
+            if (errDiv) {
+                errDiv.textContent = data.mensaje || "Error al autenticar con la BD.";
+                errDiv.classList.remove('hidden');
+            }
+        }
+    } catch (err) {
+        if (errDiv) {
+            errDiv.textContent = "Error de conexión con el servidor Flask/MySQL.";
+            errDiv.classList.remove('hidden');
+        }
+    }
+}
+
+function cerrarSesion() {
+    usuarioAutenticado = 'us_web_publico';
+    passwordAutenticado = 'Consulta2026!';
+    if (document.getElementById('modal-login')) {
+        document.getElementById('modal-login').classList.remove('hidden');
+    }
+    if (document.getElementById('panel-operador-csv')) {
+        document.getElementById('panel-operador-csv').classList.add('hidden');
+    }
+}
+
+// Carga Dinámica de Años desde MySQL para actualizar filtros
+async function cargarAniosDinamicos() {
+    try {
+        const res = await fetch('/api/anios');
+        const anios = await res.json();
+
+        const selectInicio = document.getElementById('select-ano-inicio');
+        const selectFin = document.getElementById('select-ano-fin');
+
+        if (selectInicio && selectFin && Array.isArray(anios) && anios.length > 0) {
+            selectInicio.innerHTML = '';
+            selectFin.innerHTML = '';
+
+            anios.forEach(ano => {
+                selectInicio.innerHTML += `<option value="${ano}">${ano}</option>`;
+                selectFin.innerHTML += `<option value="${ano}">${ano}</option>`;
+            });
+
+            selectInicio.value = anios[0];
+            selectFin.value = anios[anios.length - 1];
+
+            ejecutarConsulta();
+        }
+    } catch (err) {
+        console.error('Error al obtener años dinámicos:', err);
+    }
+}
+
+// Subida de Datasets CSV con Permisos de Operador y Ejecución de Trigger
+async function subirDatasetCSV(event) {
+    if (event) event.preventDefault();
+    const fileInput = document.getElementById('input-archivo-csv');
+    const msgDiv = document.getElementById('msg-subida-csv');
+
+    if (!fileInput || !fileInput.files[0]) {
+        alert("Por favor seleccione un archivo CSV.");
+        return;
+    }
+
+    const formData = new FormData();
+    formData.append('archivo', fileInput.files[0]);
+    formData.append('usuario', usuarioAutenticado || 'us_operador_lima');
+    formData.append('password', passwordAutenticado || 'OperadorMef2026!');
+
+    if (msgDiv) {
+        msgDiv.className = "mt-3 p-2.5 rounded-lg text-xs font-semibold bg-sky-900/40 text-sky-200 border border-sky-500/50";
+        msgDiv.textContent = "Procesando dataset en MySQL y registrando auditoría...";
+        msgDiv.classList.remove('hidden');
+    }
+
+    try {
+        const res = await fetch('/api/subir-csv', {
+            method: 'POST',
+            body: formData
+        });
+        const data = await res.json();
+
+        if (res.ok && data.exito) {
+            if (msgDiv) {
+                msgDiv.className = "mt-3 p-2.5 rounded-lg text-xs font-semibold bg-emerald-900/40 text-emerald-200 border border-emerald-500/50";
+                msgDiv.textContent = `✔ ${data.mensaje}`;
+            }
+            fileInput.value = '';
+            cargarAniosDinamicos();
+        } else {
+            if (msgDiv) {
+                msgDiv.className = "mt-3 p-2.5 rounded-lg text-xs font-semibold bg-red-900/40 text-red-200 border border-red-500/50";
+                msgDiv.textContent = `✖ Denegado por MySQL / Error: ${data.mensaje}`;
+            }
+        }
+    } catch (err) {
+        if (msgDiv) {
+            msgDiv.className = "mt-3 p-2.5 rounded-lg text-xs font-semibold bg-red-900/40 text-red-200 border border-red-500/50";
+            msgDiv.textContent = "Error al comunicarse con la API de carga: " + err.message;
+        }
+    }
+}
+
+// -----------------------------------------------------------------------------
+// BÚSQUEDA Y AUTOCOMPLETADO
+// -----------------------------------------------------------------------------
+
 function configurarBuscador() {
     const inputBusqueda = document.getElementById('input-busqueda');
     const listaAutocompletado = document.getElementById('lista-autocompletado');
+
+    if (!inputBusqueda || !listaAutocompletado) return;
 
     inputBusqueda.addEventListener('input', async (e) => {
         const query = e.target.value.trim();
@@ -132,23 +289,27 @@ function cambiarModulo(nombreModulo) {
         btnActivo.className = "nav-btn px-4 py-2 rounded-lg bg-gradient-to-r from-sky-500 to-cyan-500 text-white font-bold shadow-md shadow-sky-500/20 transition-all flex items-center gap-2";
     }
 
-    document.getElementById('modulo-titulo').innerHTML = `<span class="w-2 h-6 bg-sky-500 rounded-full inline-block"></span> ${config.titulo}`;
-    document.getElementById('modulo-subtitulo').textContent = config.subtitulo;
+    if (document.getElementById('modulo-titulo')) {
+        document.getElementById('modulo-titulo').innerHTML = `<span class="w-2 h-6 bg-sky-500 rounded-full inline-block"></span> ${config.titulo}`;
+    }
+    if (document.getElementById('modulo-subtitulo')) {
+        document.getElementById('modulo-subtitulo').textContent = config.subtitulo;
+    }
 
-    document.getElementById('kpi-label-1').textContent = config.kpi1.label;
-    document.getElementById('kpi-sub-1').innerHTML = config.kpi1.sub;
+    if (document.getElementById('kpi-label-1')) document.getElementById('kpi-label-1').textContent = config.kpi1.label;
+    if (document.getElementById('kpi-sub-1')) document.getElementById('kpi-sub-1').innerHTML = config.kpi1.sub;
 
-    document.getElementById('kpi-label-2').textContent = config.kpi2.label;
-    document.getElementById('kpi-sub-2').innerHTML = config.kpi2.sub;
+    if (document.getElementById('kpi-label-2')) document.getElementById('kpi-label-2').textContent = config.kpi2.label;
+    if (document.getElementById('kpi-sub-2')) document.getElementById('kpi-sub-2').innerHTML = config.kpi2.sub;
 
-    document.getElementById('kpi-label-3').textContent = config.kpi3.label;
-    document.getElementById('kpi-sub-3').innerHTML = config.kpi3.sub;
+    if (document.getElementById('kpi-label-3')) document.getElementById('kpi-label-3').textContent = config.kpi3.label;
+    if (document.getElementById('kpi-sub-3')) document.getElementById('kpi-sub-3').innerHTML = config.kpi3.sub;
 
-    document.getElementById('kpi-label-4').textContent = config.kpi4.label;
-    document.getElementById('kpi-sub-4').innerHTML = config.kpi4.sub;
+    if (document.getElementById('kpi-label-4')) document.getElementById('kpi-label-4').textContent = config.kpi4.label;
+    if (document.getElementById('kpi-sub-4')) document.getElementById('kpi-sub-4').innerHTML = config.kpi4.sub;
 
-    document.getElementById('chart-title-1').innerHTML = config.chartTitle1;
-    document.getElementById('chart-title-2').innerHTML = config.chartTitle2;
+    if (document.getElementById('chart-title-1')) document.getElementById('chart-title-1').innerHTML = config.chartTitle1;
+    if (document.getElementById('chart-title-2')) document.getElementById('chart-title-2').innerHTML = config.chartTitle2;
 
     ejecutarConsulta();
 }
@@ -156,15 +317,21 @@ function cambiarModulo(nombreModulo) {
 // Ejecutar Consulta con Filtros de Periodo y Mensajes de Carga
 async function ejecutarConsulta() {
     const secEjec = entidadSeleccionada ? entidadSeleccionada.sec_ejec : '301086';
-    const anoInicio = document.getElementById('select-ano-inicio').value;
-    const anoFin = document.getElementById('select-ano-fin').value;
+    const selectInicio = document.getElementById('select-ano-inicio');
+    const selectFin = document.getElementById('select-ano-fin');
+
+    if (!selectInicio || !selectFin || !selectInicio.value || !selectFin.value) {
+        return;
+    }
+
+    const anoInicio = selectInicio.value;
+    const anoFin = selectFin.value;
 
     if (parseInt(anoInicio) > parseInt(anoFin)) {
         alert("El año inicial no puede ser mayor al año final.");
         return;
     }
 
-    // Activar Animación de Carga (Loading Overlay y Estado del Botón)
     mostrarEstadoCarga(true);
 
     try {
@@ -174,62 +341,59 @@ async function ejecutarConsulta() {
         if (res.status === 200) {
             actualizarBannerEntidad(data.entidad, anoInicio, anoFin);
             actualizarInterfaz(data, anoInicio, anoFin);
-        } else {
-            console.warn("No se obtuvieron datos de la API, usando respaldo");
         }
     } catch (err) {
         console.error("Error al consultar la API:", err);
     } finally {
-        // Desactivar Animación de Carga
         mostrarEstadoCarga(false);
     }
 }
 
-// Mostrar u Ocultar Indicadores de Carga
 function mostrarEstadoCarga(cargando) {
     const overlay = document.getElementById('loading-overlay');
     const iconBtn = document.getElementById('icon-btn-consultar');
     const txtBtn = document.getElementById('txt-btn-consultar');
 
-    if (cargando) {
-        overlay.classList.remove('hidden');
-        iconBtn.className = "fa-solid fa-circle-notch fa-spin text-[10px]";
-        txtBtn.textContent = "CARGANDO...";
-    } else {
-        overlay.classList.add('hidden');
-        iconBtn.className = "fa-solid fa-filter text-[10px]";
-        txtBtn.textContent = "CONSULTAR";
+    if (overlay) {
+        if (cargando) overlay.classList.remove('hidden');
+        else overlay.classList.add('hidden');
+    }
+    if (iconBtn) {
+        iconBtn.className = cargando ? "fa-solid fa-circle-notch fa-spin text-[10px]" : "fa-solid fa-filter text-[10px]";
+    }
+    if (txtBtn) {
+        txtBtn.textContent = cargando ? "CARGANDO..." : "CONSULTAR";
     }
 }
 
-// Actualizar el Banner Principal de la Entidad
 function actualizarBannerEntidad(entidad, anoInicio, anoFin) {
-    if (entidad) {
+    if (entidad && document.getElementById('entidad-nombre-grande')) {
         document.getElementById('entidad-nombre-grande').textContent = entidad.ejecutora_nombre;
         document.getElementById('entidad-sec-ejec').textContent = entidad.sec_ejec;
     }
-    document.getElementById('entidad-periodo').textContent = `${anoInicio} — ${anoFin}`;
+    if (document.getElementById('entidad-periodo')) {
+        document.getElementById('entidad-periodo').textContent = `${anoInicio} — ${anoFin}`;
+    }
 }
 
-// Actualizar KPIs, Tablas y Gráficos
 function actualizarInterfaz(data, anoInicio, anoFin) {
-    const ind = data.indicadores;
+    const ind = data.indicadores || {};
 
     if (moduloActual === 'ingresos') {
-        document.getElementById('kpi-val-1').textContent = formatearSoles(ind.total_ingresos_recaudados * 0.9);
-        document.getElementById('kpi-val-2').textContent = formatearSoles(ind.total_ingresos_recaudados * 1.05);
-        document.getElementById('kpi-val-3').textContent = formatearSoles(ind.total_ingresos_recaudados);
-        document.getElementById('kpi-val-4').textContent = `${ind.porcentaje_ejecucion_gasto}%`;
+        if (document.getElementById('kpi-val-1')) document.getElementById('kpi-val-1').textContent = formatearSoles((ind.total_ingresos_recaudados || 0) * 0.9);
+        if (document.getElementById('kpi-val-2')) document.getElementById('kpi-val-2').textContent = formatearSoles((ind.total_ingresos_recaudados || 0) * 1.05);
+        if (document.getElementById('kpi-val-3')) document.getElementById('kpi-val-3').textContent = formatearSoles(ind.total_ingresos_recaudados || 0);
+        if (document.getElementById('kpi-val-4')) document.getElementById('kpi-val-4').textContent = `${ind.porcentaje_ejecucion_gasto || 0}%`;
     } else if (moduloActual === 'gasto') {
-        document.getElementById('kpi-val-1').textContent = formatearSoles(ind.total_gasto_social_devengado * 1.1);
-        document.getElementById('kpi-val-2').textContent = formatearSoles(ind.total_gasto_social_devengado * 1.15);
-        document.getElementById('kpi-val-3').textContent = formatearSoles(ind.total_gasto_social_devengado);
-        document.getElementById('kpi-val-4').textContent = `${ind.porcentaje_ejecucion_gasto}%`;
+        if (document.getElementById('kpi-val-1')) document.getElementById('kpi-val-1').textContent = formatearSoles((ind.total_gasto_social_devengado || 0) * 1.1);
+        if (document.getElementById('kpi-val-2')) document.getElementById('kpi-val-2').textContent = formatearSoles((ind.total_gasto_social_devengado || 0) * 1.15);
+        if (document.getElementById('kpi-val-3')) document.getElementById('kpi-val-3').textContent = formatearSoles(ind.total_gasto_social_devengado || 0);
+        if (document.getElementById('kpi-val-4')) document.getElementById('kpi-val-4').textContent = `${ind.porcentaje_ejecucion_gasto || 0}%`;
     } else {
-        document.getElementById('kpi-val-1').textContent = formatearSoles(ind.total_ingresos_recaudados);
-        document.getElementById('kpi-val-2').textContent = formatearSoles(ind.total_gasto_social_devengado);
-        document.getElementById('kpi-val-3').textContent = formatearSoles(ind.total_transferencias_acreditadas);
-        document.getElementById('kpi-val-4').textContent = `${data.detalle.proyectos ? data.detalle.proyectos.length : 0} Activos`;
+        if (document.getElementById('kpi-val-1')) document.getElementById('kpi-val-1').textContent = formatearSoles(ind.total_ingresos_recaudados || 0);
+        if (document.getElementById('kpi-val-2')) document.getElementById('kpi-val-2').textContent = formatearSoles(ind.total_gasto_social_devengado || 0);
+        if (document.getElementById('kpi-val-3')) document.getElementById('kpi-val-3').textContent = formatearSoles(ind.total_transferencias_acreditadas || 0);
+        if (document.getElementById('kpi-val-4')) document.getElementById('kpi-val-4').textContent = `${data.detalle && data.detalle.proyectos ? data.detalle.proyectos.length : 0} Activos`;
     }
 
     renderizarTablaResultados(data, anoInicio, anoFin);
@@ -238,14 +402,16 @@ function actualizarInterfaz(data, anoInicio, anoFin) {
 
 function renderizarTablaResultados(data, anoInicio, anoFin) {
     const tbody = document.getElementById('tabla-resultados-body');
+    if (!tbody) return;
     tbody.innerHTML = '';
 
     const nombreEntidad = data.entidad ? data.entidad.ejecutora_nombre : "ENTIDAD CONSULTADA";
+    const ind = data.indicadores || {};
 
     const filas = [
-        { entidad: nombreEntidad, periodo: `${anoInicio} - ${anoFin}`, ind: "Ingresos Recaudados Totales", monto: formatearSoles(data.indicadores.total_ingresos_recaudados) },
-        { entidad: nombreEntidad, periodo: `${anoInicio} - ${anoFin}`, ind: "Gasto Social Devengado", monto: formatearSoles(data.indicadores.total_gasto_social_devengado) },
-        { entidad: nombreEntidad, periodo: `${anoInicio} - ${anoFin}`, ind: "Transferencias Acreditadas", monto: formatearSoles(data.indicadores.total_transferencias_acreditadas) }
+        { entidad: nombreEntidad, periodo: `${anoInicio} - ${anoFin}`, ind: "Ingresos Recaudados Totales", monto: formatearSoles(ind.total_ingresos_recaudados || 0) },
+        { entidad: nombreEntidad, periodo: `${anoInicio} - ${anoFin}`, ind: "Gasto Social Devengado", monto: formatearSoles(ind.total_gasto_social_devengado || 0) },
+        { entidad: nombreEntidad, periodo: `${anoInicio} - ${anoFin}`, ind: "Transferencias Acreditadas", monto: formatearSoles(ind.total_transferencias_acreditadas || 0) }
     ];
 
     filas.forEach(item => {
@@ -264,42 +430,44 @@ function renderizarTablaResultados(data, anoInicio, anoFin) {
 }
 
 function inicializarGraficos() {
-    const ctx1 = document.getElementById('chartPrincipal').getContext('2d');
-    chartPrincipal = new Chart(ctx1, {
-        type: 'bar',
-        data: {
-            labels: ['2021', '2022', '2023'],
-            datasets: [{
-                label: 'Monto Devengado (S/)',
-                data: [0, 0, 0],
-                backgroundColor: '#0284c7',
-                borderRadius: 6
-            }]
-        },
-        options: { responsive: true, maintainAspectRatio: false }
-    });
+    const c1 = document.getElementById('chartPrincipal');
+    if (c1) {
+        chartPrincipal = new Chart(c1.getContext('2d'), {
+            type: 'bar',
+            data: {
+                labels: ['2021', '2022', '2023'],
+                datasets: [{
+                    label: 'Monto Devengado (S/)',
+                    data: [0, 0, 0],
+                    backgroundColor: '#0284c7',
+                    borderRadius: 6
+                }]
+            },
+            options: { responsive: true, maintainAspectRatio: false }
+        });
+    }
 
-    const ctx2 = document.getElementById('chartSecundario').getContext('2d');
-    chartSecundario = new Chart(ctx2, {
-        type: 'doughnut',
-        data: {
-            labels: ['Recursos Ordinarios', 'Canon y Sobrecanon', 'Donaciones'],
-            datasets: [{
-                data: [60, 30, 10],
-                backgroundColor: ['#0284c7', '#06b6d4', '#38bdf8']
-            }]
-        },
-        options: { responsive: true, maintainAspectRatio: false }
-    });
+    const c2 = document.getElementById('chartSecundario');
+    if (c2) {
+        chartSecundario = new Chart(c2.getContext('2d'), {
+            type: 'doughnut',
+            data: {
+                labels: ['Recursos Ordinarios', 'Canon y Sobrecanon', 'Donaciones'],
+                datasets: [{
+                    data: [60, 30, 10],
+                    backgroundColor: ['#0284c7', '#06b6d4', '#38bdf8']
+                }]
+            },
+            options: { responsive: true, maintainAspectRatio: false }
+        });
+    }
 }
 
 function renderizarGraficosDinamicos(data, anoInicio, anoFin) {
     if (chartPrincipal) {
         chartPrincipal.data.labels = [anoInicio, anoFin];
-        chartPrincipal.data.datasets[0].data = [
-            data.indicadores.total_gasto_social_devengado * 0.8,
-            data.indicadores.total_gasto_social_devengado
-        ];
+        const val = data.indicadores ? (data.indicadores.total_gasto_social_devengado || 0) : 0;
+        chartPrincipal.data.datasets[0].data = [val * 0.8, val];
         chartPrincipal.update();
     }
 }
